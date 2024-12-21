@@ -2,6 +2,7 @@ require('dotenv').config();
 const TelegramBot = require('node-telegram-bot-api');
 const winston = require('winston');
 const APIClient = require('./apiClient');
+const http = require('http');
 
 // 配置日志
 const logger = winston.createLogger({
@@ -16,6 +17,31 @@ const logger = winston.createLogger({
         new winston.transports.File({ filename: 'combined.log' })
     ]
 });
+
+// 创建一个简单的 HTTP 服务器
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Bot is running!');
+});
+
+// 监听端口
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    logger.info(`HTTP 服务器运行在端口 ${PORT}`);
+});
+
+// 简单的自我保活
+setInterval(() => {
+    logger.info('保持服务活跃...');
+    // 发送一个简单的请求给自己的服务器
+    http.get(`http://localhost:${PORT}`, (res) => {
+        if (res.statusCode === 200) {
+            logger.info('服务器正常运行中');
+        }
+    }).on('error', (err) => {
+        logger.error('保活请求失败:', err.message);
+    });
+}, 10 * 60 * 1000); // 每10分钟执行一次
 
 // 创建API客户端
 const apiClient = new APIClient(
